@@ -10,14 +10,6 @@ import json
 USERNAME = "fucked"
 PASSWORD = "fucked"
 
-__plugin_meta__ = PluginMetadata(
-    name="CK服务器检查器",
-    description="检查CK服务器状态的插件",
-    usage="/cksvr - 检查服务器状态",
-    type="application",
-    homepage="https://github.com/your-repo",
-    supported_adapters={"onebot.v11"},
-)
 
 cksvr_cmd = Alconna(
     "/cksvr",
