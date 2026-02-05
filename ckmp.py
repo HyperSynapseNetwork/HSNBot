@@ -58,7 +58,7 @@ async def handle_cksvr():
     
     try:
         reader, writer = await asyncio.open_connection(
-            'service.htadiy.cc', 7865
+            'service.htadiy.com', 7865
         )
     except ConnectionRefusedError:
         await cksvr.finish("❌ 服务器异常：连接被拒绝，服务器可能根本没开")
@@ -71,7 +71,7 @@ async def handle_cksvr():
         await cksvr.send(f"❌ 握手时发生未知错误: {str(e)}")
     
     try:
-        header = bytes.fromhex('01220120')
+        header = bytes.fromhex('01160114')
         token_bytes = bytes.fromhex(token_hex)
         packet = header + token_bytes
         
