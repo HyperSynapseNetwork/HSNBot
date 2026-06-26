@@ -26,7 +26,7 @@ mcstatus = on_alconna("mcstatus", priority=10, block=True)
 @mcstatus.handle()
 async def handle_mcstatus():
     try:
-        server_info = await get_server_status("play.simpfun.cn", 27098)
+        server_info = await get_server_status("play.simpfun.cn", 17659)
         
         html_content = generate_html(server_info)
         image = await html_to_pic(html_content, viewport={"width": 600, "height": 800})
@@ -38,7 +38,7 @@ async def handle_mcstatus():
         await mcstatus.send(f"处理请求时出错: {str(e)}")
 
 async def get_server_status(host: str, port: int) -> dict:
-    
+    """获取Minecraft服务器状态信息"""
     server = JavaServer.lookup(f"{host}:{port}")
     try:
         status = await asyncio.to_thread(server.status)
@@ -61,7 +61,7 @@ async def get_server_status(host: str, port: int) -> dict:
         }
 
 def generate_html(data: dict) -> str:
-    
+    """生成美观的HTML状态页面"""
     if "error" in data:
         return f"""
         <div style="

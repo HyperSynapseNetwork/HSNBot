@@ -27,10 +27,10 @@ users_cmd = on_alconna(
 @users_cmd.handle()
 async def handle_users():
     try:
-        # 创建异步
+        # 创建异步会话
         async with aiohttp.ClientSession() as session:
-            # 发送GET请求
-            async with session.get('http://154.64.253.143:5001/users') as response:
+            # 发送GET<
+            async with session.get('http://23.141.172.246:5001/users') as response:
                 if response.status == 200:
                     data = await response.json()
                     user_count = data.get('total_online_users', '未知')

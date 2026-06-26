@@ -9,16 +9,16 @@ restart = on_command("restart", priority=5, block=True)
 async def handle_restart(event: GroupMessageEvent, args: Message = CommandArg()):
     # 添加调试日志
     
-    # 检查权限
+    # 检查发送者是否为群主或管理员
     if event.sender.role not in ["owner", "admin"]:
         await restart.send("注意：仅限管理员与群主可使用此命令。")
-        return 
+        return  # 确保函数结束
     
     arg_text = args.extract_plain_text().strip()
     
     try:
         if arg_text == "api":
-            # 执行重启
+            # 执行 API 重启命令
             result1 = subprocess.run(["bash", "/root/botstopapi.sh"], capture_output=True, text=True)
             result2 = subprocess.run(["bash", "/root/startapi.sh"], capture_output=True, text=True)
             
@@ -27,9 +27,9 @@ async def handle_restart(event: GroupMessageEvent, args: Message = CommandArg())
             else:
                 await restart.send(f"API重启失败：{result2.stderr}")
         else:
-            # 执行重启phira服务器
-            result1 = subprocess.run(["screen", "-S", "Phira", "-X", "quit"], capture_output=True, text=True)
-            result2 = subprocess.run(["bash", "/root/start.sh"], capture_output=True, text=True)
+            # 执行普通重启命令
+            result1 = subprocess.run(["screen", "-S", "Phiranew", "-X", "quit"], capture_output=True, text=True)
+            result2 = subprocess.run(["bash", "/root/startnew.sh"], capture_output=True, text=True)
             
             if result2.returncode == 0:
                 await restart.send("重启Phira服务器成功")

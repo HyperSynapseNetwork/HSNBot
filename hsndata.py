@@ -16,17 +16,23 @@ from nonebot_plugin_alconna import (
     AlconnaMatches, UniMessage
 )
 
-
+# ============================================================================
 # 全局配置
+# ============================================================================
 
-API_BASE_URL = "http://localhost:7001"
+# HSN监控API的基础URL
+API_BASE_URL = "http://23.141.172.246:7001"
 
+# 图表存储路径（本地文件夹）
 CHART_PATH = Path("/root/ranksfuck/charts")  # 修改为你的图表文件夹路径
 
+# Phira用户API基础URL
 PHIRA_USER_API = "https://phira.5wyxi.com/user"
 
+# HTTP请求超时设置(秒)
 REQUEST_TIMEOUT = 30.0
 
+# 图表文件名映射（根据API文档的"图表文件说明"）1
 CHART_MAPPING = {
     "hsn": "hsn_trend_minutely.png",           # 全量HSN服务器在线人数变化图表（每分钟自动生成）
     "room": "room_usage_ranking.png",           # 房间名使用次数排行榜
@@ -159,7 +165,21 @@ async def make_api_request(
     params: Optional[dict] = None,
     json_data: Optional[dict] = None
 ) -> dict | bytes | None:
+    """
+    向HSN API发起HTTP请求，包含完善的错误处理。
     
+    Args:
+        endpoint: API端点路径 (例如: "/health")
+        method: HTTP方法 (GET, POST等)
+        params: 查询参数
+        json_data: JSON请求体数据
+    
+    Returns:
+        响应数据 (dict或bytes)
+        
+    Raises:
+        httpx.HTTPError: 网络或HTTP错误
+    """
     url = f"{API_BASE_URL}{endpoint}"
     
     try:
@@ -195,7 +215,15 @@ async def make_api_request(
 
 
 async def get_username_from_phira(user_id: int) -> str:
+    """
+    从Phira API获取用户名。
     
+    Args:
+        user_id: 用户ID
+        
+    Returns:
+        用户名，获取失败则返回"用户{id}"
+    """
     try:
         url = f"{PHIRA_USER_API}/{user_id}"
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -212,13 +240,29 @@ async def get_username_from_phira(user_id: int) -> str:
 
 
 def format_json_response(data: dict) -> str:
-   
+    """
+    将JSON响应数据格式化为可读文本。
+    
+    Args:
+        data: JSON数据字典
+        
+    Returns:
+        格式化的字符串
+    """
     import json
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
 def create_error_message(error: Exception) -> str:
+    """
+    创建用户友好的错误消息。
     
+    Args:
+        error: 异常对象
+        
+    Returns:
+        格式化的错误消息
+    """
     if isinstance(error, httpx.TimeoutException):
         return "⏱️ 请求超时，请稍后重试"
     elif isinstance(error, httpx.HTTPStatusError):
@@ -263,13 +307,13 @@ async def handle_health():
         await hsndata.send(create_error_message(e))
 
 
-# HSN历史数据
+# 处理器2: HSN历史数据
 @hsndata.assign("history")
 async def handle_history(
     start: Match[str],
     end: Match[str]
 ):
-    
+    """获取HSN历史数据，支持可选时间范围。"""
     logger.info("收到HSN历史数据请求")
     
     try:
@@ -328,13 +372,13 @@ async def handle_history(
         await hsndata.send(create_error_message(e))
 
 
-# 生成HSN图表
+# 处理器3: 生成HSN图表
 @hsndata.assign("chart")
 async def handle_generate_chart(
     start: str,
     end: str
 ):
-    
+    """生成指定时段的HSN图表。"""
     logger.info(f"收到图表生成请求: {start} 到 {end}")
     
     try:
@@ -381,7 +425,7 @@ async def handle_generate_chart(
 # 处理器4: 列出所有图表
 @hsndata.assign("charts")
 async def handle_list_charts():
-    
+    """获取所有已生成图表的列表。"""
     logger.info("收到图表列表请求")
     
     try:
@@ -433,7 +477,15 @@ async def handle_list_charts():
 # 处理器5: 获取图表图片(从本地文件读取)
 @hsndata.assign("image")
 async def handle_get_chart_image(chart_type: str):
+    """
+    从本地文件夹读取并发送图表图片。
     
+    支持的类型:
+    - hsn: HSN在线人数趋势图
+    - room: 房间使用排名图
+    - user_bar: 用户游玩时间柱状图
+    - user_pie: 用户游玩时间饼图
+    """
     logger.info(f"收到图表图片请求: {chart_type}")
     
     # 验证图表类型
@@ -489,7 +541,7 @@ async def handle_get_chart_image(chart_type: str):
 # 处理器6: 房间使用排名
 @hsndata.assign("roomrank")
 async def handle_room_ranking():
-  
+    """获取房间使用次数排名。"""
     logger.info("收到房间排名请求")
     
     try:
@@ -541,7 +593,11 @@ async def handle_room_ranking():
 # 处理器7: 用户游玩时间排名（支持查询指定用户）
 @hsndata.assign("userrank")
 async def handle_user_ranking(user_id: Match[int]):
-    
+    """
+    获取用户游玩时间排名，或查询指定用户数据。
+    如果提供user_id，则查询该用户的详细数据。
+    否则显示所有用户排名。
+    """
     logger.info(f"收到用户排名请求，用户ID: {user_id.result if user_id.available else '全部'}")
     
     try:
@@ -608,7 +664,12 @@ async def handle_user_ranking(user_id: Match[int]):
 
 
 async def handle_single_user_query(user_id: int):
-   
+    """
+    查询指定用户的游玩数据。
+    
+    Args:
+        user_id: 用户ID
+    """
     logger.info(f"查询用户 {user_id} 的数据")
     
     try:
@@ -674,7 +735,7 @@ async def handle_single_user_query(user_id: int):
 # 处理器8: 手动触发图表生成
 @hsndata.assign("generate")
 async def handle_trigger_generation():
-    
+    """手动触发图表生成流程。"""
     logger.info("收到手动图表生成触发请求")
     
     try:
@@ -708,14 +769,14 @@ async def handle_trigger_generation():
         await hsndata.send(create_error_message(e))
 
 
-# 游玩时间排行榜
+# 处理器9: 游玩时间排行榜
 @hsndata.assign("leaderboard")
 async def handle_leaderboard(limit: Match[int]):
     """获取游玩时间排行榜，支持可选的前N名限制。"""
     logger.info(f"收到排行榜请求，限制: {limit.result if limit.available else '全部'}")
     
     try:
-        
+        # 决定使用哪个端点
         if limit.available and limit.result and limit.result > 0:
             endpoint = f"/api/playtime_leaderboard/top/{limit.result}"
         else:
@@ -727,7 +788,7 @@ async def handle_leaderboard(limit: Match[int]):
             await hsndata.send("❌ 未获取到排行榜数据")
             return
         
-        
+        # 格式化排行榜
         if isinstance(data, dict):
             success = data.get("success", False)
             if not success:
@@ -735,7 +796,7 @@ async def handle_leaderboard(limit: Match[int]):
                 await hsndata.send(f"❌ {error_msg}")
                 return
             
-            
+            # API返回的是data字段
             leaderboard = data.get("data", [])
             total_users = data.get("total_users", len(leaderboard))
             timestamp = data.get("timestamp", "")
@@ -791,10 +852,10 @@ async def handle_leaderboard(limit: Match[int]):
 
 @hsndata.handle()
 async def handle_default(result: Arparma = AlconnaMatches()):
-    
+    """处理无子命令的主命令 - 显示帮助信息。"""
     if not result.matched or not result.subcommands:
         help_text = """
-📊 HSN数据查看器
+📊 HSN数据监控系统
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 

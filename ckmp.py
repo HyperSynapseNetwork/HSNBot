@@ -7,10 +7,21 @@ import aiohttp
 import asyncio
 import json
 
-USERNAME = "fucked"
-PASSWORD = "fucked"
+# 全局变量 - 在这里修改用户名和密码
+USERNAME = "YOUR_FUCKING_EMAIL"
+PASSWORD = "YOUR_FUCKING_PASSWORD"
 
+# 插件元信息
+__plugin_meta__ = PluginMetadata(
+    name="CK服务器检查器",
+    description="检查CK服务器状态的插件",
+    usage="/cksvr - 检查服务器状态",
+    type="application",
+    homepage="https://github.com/your-repo",
+    supported_adapters={"onebot.v11"},
+)
 
+# 创建Alconna命令
 cksvr_cmd = Alconna(
     "/cksvr",
     meta=CommandMeta(
@@ -20,6 +31,7 @@ cksvr_cmd = Alconna(
     )
 )
 
+# 创建命令处理器
 cksvr = on_alconna(cksvr_cmd, aliases={"/cksvr"}, priority=10, block=True)
 
 @cksvr.handle()
@@ -27,6 +39,7 @@ async def handle_cksvr():
     reader = None
     writer = None
     
+    # 第一步：发送POST请求获取token
     async with aiohttp.ClientSession() as session:
         login_data = {
             "email": USERNAME,
@@ -54,8 +67,10 @@ async def handle_cksvr():
         except Exception as e:
             await cksvr.send(f"❌ 登录时发生未知错误: {str(e)}")
     
-    token_hex = token.encode('utf-8').hex()
+    # 第二步：将token转换为hex
+        token_hex = token.encode('utf-8').hex()
     
+    # 第三步：建立TCP连接
     try:
         reader, writer = await asyncio.open_connection(
             'service.htadiy.com', 7865
@@ -63,21 +78,25 @@ async def handle_cksvr():
     except ConnectionRefusedError:
         await cksvr.finish("❌ 服务器异常：连接被拒绝，服务器可能根本没开")
     except OSError as e:
-        if e.errno == 111:  
+        if e.errno == 111:  # 连接被拒绝的错误码
             await cksvr.finish("❌ 服务器异常：连接被拒绝，可能服务器可能根本没开")
         else:
             await cksvr.finish(f"❌ 网络异常: {str(e)}")
     except Exception as e:
         await cksvr.send(f"❌ 握手时发生未知错误: {str(e)}")
     
+    # 只有在连接成功后才执行以下代码
     try:
+        # 构造数据包：01 22 01 20 + hex(token)
         header = bytes.fromhex('01160114')
         token_bytes = bytes.fromhex(token_hex)
         packet = header + token_bytes
         
+        # 发送数据包
         writer.write(packet)
         await writer.drain()
         
+        # 设置超时等待响应
         try:
             response = await asyncio.wait_for(reader.read(1024), timeout=5.0)
             if response:
@@ -91,10 +110,12 @@ async def handle_cksvr():
     except Exception as e:
         await cksvr.send(f"❌ 在发包时异常: {str(e)}")
     finally:
+        # 确保在连接成功的情况下关闭连接
         if writer and not writer.is_closing():
             writer.close()
             await writer.wait_closed()
 
+# 配置加载时的提示
 driver = get_driver()
 
 @driver.on_startup
